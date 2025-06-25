@@ -19,7 +19,7 @@ struct CalendarView: View {
                             .font(.title2)
                             .foregroundColor(.blue)
                     }
-                    .disabled(calendarManager.authorizationStatus != .authorized)
+                    .disabled(calendarManager.authorizationStatus != EKAuthorizationStatus.authorized)
                     
                     Spacer()
                     
@@ -33,7 +33,7 @@ struct CalendarView: View {
                             .font(.title2)
                             .foregroundColor(.blue)
                     }
-                    .disabled(calendarManager.authorizationStatus != .authorized)
+                    .disabled(calendarManager.authorizationStatus != EKAuthorizationStatus.authorized)
                     
                     Button(action: { showingSettingsSheet = true }) {
                         Image(systemName: "gearshape")
@@ -56,7 +56,7 @@ struct CalendarView: View {
                     }
                 }
                 
-                if calendarManager.authorizationStatus == .authorized {
+                if calendarManager.authorizationStatus == EKAuthorizationStatus.authorized {
                     calendarContentView
                 } else {
                     accessRequiredView
@@ -69,7 +69,7 @@ struct CalendarView: View {
                     Button(action: { showingAddEvent = true }) {
                         Image(systemName: "plus")
                     }
-                    .disabled(calendarManager.authorizationStatus != .authorized)
+                    .disabled(calendarManager.authorizationStatus != EKAuthorizationStatus.authorized)
                 }
             }
             .sheet(isPresented: $showingAddEvent) {
@@ -80,8 +80,10 @@ struct CalendarView: View {
             }
             .onAppear(perform: handleCalendarAccess)
             .onChange(of: currentMonth) { newMonth in
-                if calendarManager.authorizationStatus == .authorized {
+                if calendarManager.authorizationStatus == EKAuthorizationStatus.authorized {
                     calendarManager.loadEvents(for: newMonth)
+                } else if calendarManager.authorizationStatus == EKAuthorizationStatus.denied {
+                    showingPermissionAlert = true
                 }
             }
             .alert("Calendar Access Required", isPresented: $showingPermissionAlert) {
@@ -189,7 +191,7 @@ struct CalendarView: View {
         case .success: return "Access Granted"
         case .failure: return "Try Again"
         default:
-            return calendarManager.authorizationStatus == .denied ? "Open Settings" : "Grant Access"
+            return calendarManager.authorizationStatus == EKAuthorizationStatus.denied ? "Open Settings" : "Grant Access"
         }
     }
     
@@ -207,7 +209,7 @@ struct CalendarView: View {
     private func requestAccess() {
         accessRequestState = .inProgress
         
-        if calendarManager.authorizationStatus == .denied {
+        if calendarManager.authorizationStatus == EKAuthorizationStatus.denied {
             openAppSettings()
             accessRequestState = .notRequested
             return
@@ -240,9 +242,9 @@ struct CalendarView: View {
     
     private func handleCalendarAccess() {
         calendarManager.checkStatus()
-        if calendarManager.authorizationStatus == .authorized {
+        if calendarManager.authorizationStatus == EKAuthorizationStatus.authorized {
             calendarManager.loadEvents(for: currentMonth)
-        } else if calendarManager.authorizationStatus == .denied {
+        } else if calendarManager.authorizationStatus == EKAuthorizationStatus.denied {
             showingPermissionAlert = true
         }
     }
@@ -268,10 +270,9 @@ struct CalendarView: View {
     private func daysInMonth() -> [Date] {
         let calendar = Calendar.current
         guard let monthRange = calendar.range(of: .day, in: .month, for: currentMonth),
-              let firstDayOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: currentMonth)) else {
-            return []
-        }
-        
+              let firstDayOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: currentMonth))
+        else { return [] }
+
         let firstWeekday = calendar.component(.weekday, from: firstDayOfMonth)
         var days: [Date] = []
         
@@ -280,11 +281,6 @@ struct CalendarView: View {
             if let date = calendar.date(byAdding: .day, value: day, to: firstDayOfMonth) {
                 days.append(date)
             }
-        }
-        
-        return days
-    }
-}
         }
         
         return days

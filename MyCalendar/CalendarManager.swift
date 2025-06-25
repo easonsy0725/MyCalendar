@@ -34,17 +34,9 @@ class CalendarManager: NSObject, ObservableObject {
         isRequestingAccess = true
         lastAccessRequestError = nil
         
-        if #available(iOS 17.0, *) {
-            eventStore.requestFullAccessToEvents { [weak self] granted, error in
-                DispatchQueue.main.async {
-                    self?.handleAccessResponse(granted: granted, error: error, completion: completion)
-                }
-            }
-        } else {
-            eventStore.requestAccess(to: .event) { [weak self] granted, error in
-                DispatchQueue.main.async {
-                    self?.handleAccessResponse(granted: granted, error: error, completion: completion)
-                }
+        eventStore.requestAccess(to: .event) { [weak self] granted, error in
+            DispatchQueue.main.async {
+                self?.handleAccessResponse(granted: granted, error: error, completion: completion)
             }
         }
     }
@@ -117,10 +109,6 @@ class CalendarManager: NSObject, ObservableObject {
         case .restricted: return "Restricted"
         case .denied: return "Denied"
         case .authorized: return "Authorized"
-        @unknown default: return "Unknown"
-        }
-    }
-}
         @unknown default: return "Unknown"
         }
     }
