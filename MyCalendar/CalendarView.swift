@@ -19,7 +19,7 @@ struct CalendarView: View {
                             .font(.title2)
                             .foregroundColor(.blue)
                     }
-                    .disabled(calendarManager.authorizationStatus != EKAuthorizationStatus.authorized)
+                    .disabled(!calendarManager.isFullAccessAuthorized)
                     
                     Spacer()
                     
@@ -33,7 +33,7 @@ struct CalendarView: View {
                             .font(.title2)
                             .foregroundColor(.blue)
                     }
-                    .disabled(calendarManager.authorizationStatus != EKAuthorizationStatus.authorized)
+                    .disabled(!calendarManager.isFullAccessAuthorized)
                     
                     Button(action: { showingSettingsSheet = true }) {
                         Image(systemName: "gearshape")
@@ -56,8 +56,10 @@ struct CalendarView: View {
                     }
                 }
                 
-                if calendarManager.authorizationStatus == EKAuthorizationStatus.authorized {
+                if calendarManager.isFullAccessAuthorized {
                     calendarContentView
+                } else if calendarManager.isWriteAccessAuthorized {
+                    writeOnlyView
                 } else {
                     accessRequiredView
                 }
@@ -69,7 +71,7 @@ struct CalendarView: View {
                     Button(action: { showingAddEvent = true }) {
                         Image(systemName: "plus")
                     }
-                    .disabled(calendarManager.authorizationStatus != EKAuthorizationStatus.authorized)
+                    .disabled(!calendarManager.isWriteAccessAuthorized)
                 }
             }
             .sheet(isPresented: $showingAddEvent) {
@@ -79,8 +81,17 @@ struct CalendarView: View {
                 SettingsView(calendarManager: calendarManager)
             }
             .onAppear(perform: handleCalendarAccess)
+            .onReceive(NotificationCenter.default.publisher(for: .EKEventStoreChanged)) { _ in
+                calendarManager.checkStatus()
+                if calendarManager.isFullAccessAuthorized {
+                    calendarManager.loadEvents(for: currentMonth)
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                calendarManager.checkStatus()
+            }
             .onChange(of: currentMonth) { newMonth in
-                if calendarManager.authorizationStatus == EKAuthorizationStatus.authorized {
+                if calendarManager.isFullAccessAuthorized {
                     calendarManager.loadEvents(for: newMonth)
                 } else if calendarManager.authorizationStatus == EKAuthorizationStatus.denied {
                     showingPermissionAlert = true
@@ -139,6 +150,39 @@ struct CalendarView: View {
         }
     }
     
+    private var writeOnlyView: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            
+            Image(systemName: "pencil.circle.fill")
+                .font(.system(size: 60))
+                .foregroundColor(.orange)
+                .padding(.bottom, 20)
+            
+            Text("Write-Only Access").font(.title2.bold())
+            
+            Text("You can add new events, but to see them in the app, please grant Full Access in Settings.")
+                .multilineTextAlignment(.center)
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 30)
+            
+            Button(action: openAppSettings) {
+                Text("Open Settings")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.blue)
+                    .cornerRadius(10)
+            }
+            .padding(.horizontal, 40)
+            .padding(.top, 20)
+            
+            Spacer()
+        }
+        .padding()
+    }
+    
     private var accessRequiredView: some View {
         VStack(spacing: 20) {
             Spacer()
@@ -150,10 +194,17 @@ struct CalendarView: View {
             
             Text("Calendar Access Needed").font(.title2.bold())
             
-            Text("To display and manage your events, please grant access to your Apple Calendar.")
-                .multilineTextAlignment(.center)
-                .foregroundColor(.secondary)
-                .padding(.horizontal, 30)
+            if calendarManager.authorizationStatus == .restricted {
+                Text("Your device is restricted from changing calendar permissions. This may be due to Screen Time or a management profile. Check Settings > General > VPN & Device Management. If this app is listed there, it is being managed and you may need to contact your IT administrator.")
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 30)
+            } else {
+                Text("To display and manage your events, please grant access to your Apple Calendar.")
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 30)
+            }
             
             Button(action: requestAccess) {
                 HStack {
@@ -169,6 +220,7 @@ struct CalendarView: View {
                 .background(buttonBackground)
                 .cornerRadius(10)
             }
+            .disabled(calendarManager.authorizationStatus == .restricted)
             .padding(.horizontal, 40)
             .padding(.top, 20)
             
@@ -191,7 +243,11 @@ struct CalendarView: View {
         case .success: return "Access Granted"
         case .failure: return "Try Again"
         default:
-            return calendarManager.authorizationStatus == EKAuthorizationStatus.denied ? "Open Settings" : "Grant Access"
+            switch calendarManager.authorizationStatus {
+            case .denied: return "Open Settings"
+            case .restricted: return "Access Restricted"
+            default: return "Grant Access"
+            }
         }
     }
     
@@ -207,6 +263,10 @@ struct CalendarView: View {
     }
     
     private func requestAccess() {
+        if calendarManager.authorizationStatus == .restricted {
+            return
+        }
+        
         accessRequestState = .inProgress
         
         if calendarManager.authorizationStatus == EKAuthorizationStatus.denied {
@@ -241,11 +301,19 @@ struct CalendarView: View {
     }
     
     private func handleCalendarAccess() {
+        print("[CalendarView] View appeared, handling calendar access.")
         calendarManager.checkStatus()
-        if calendarManager.authorizationStatus == EKAuthorizationStatus.authorized {
+        if calendarManager.authorizationStatus == .notDetermined {
+            print("[CalendarView] Status is 'not determined', proceeding to request access.")
+            requestAccess()
+        } else if calendarManager.isFullAccessAuthorized {
+            print("[CalendarView] Status is 'full access', loading events.")
             calendarManager.loadEvents(for: currentMonth)
-        } else if calendarManager.authorizationStatus == EKAuthorizationStatus.denied {
+        } else if calendarManager.authorizationStatus == .denied {
+            print("[CalendarView] Status is 'denied', showing alert.")
             showingPermissionAlert = true
+        } else {
+            print("[CalendarView] Status is '\(calendarManager.authorizationStatusString())', showing appropriate view.")
         }
     }
     

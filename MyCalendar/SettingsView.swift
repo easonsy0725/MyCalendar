@@ -8,7 +8,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section(header: Text("Calendar Access")) {
+                Section {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
                             Image(systemName: statusIcon)
@@ -27,7 +27,7 @@ struct SettingsView: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(buttonColor)
-                        .disabled(accessRequestState == .inProgress)
+                        .disabled(isButtonDisabled)
                         
                         if case .failure(let error) = accessRequestState {
                             Text(error.localizedDescription)
@@ -38,6 +38,12 @@ struct SettingsView: View {
                         }
                     }
                     .padding(.vertical, 5)
+                } header: {
+                    Text("Calendar Access")
+                } footer: {
+                    if calendarManager.authorizationStatus == .restricted {
+                        Text("Access is restricted. This may be due to Screen Time or a management profile. If you see this app listed under Settings > General > VPN & Device Management, you may need to contact your IT administrator to allow changes.")
+                    }
                 }
                 
                 Section(header: Text("App Information")) {
@@ -100,7 +106,17 @@ struct SettingsView: View {
         case .authorized: return "Access granted"
         case .denied: return "Access denied"
         case .notDetermined: return "Access not requested"
-        default: return "Unknown status"
+        case .restricted: return "Access restricted"
+        @unknown default:
+            if #available(iOS 17.0, *) {
+                if calendarManager.authorizationStatus == .fullAccess {
+                    return "Full access granted"
+                }
+                if calendarManager.authorizationStatus == .writeOnly {
+                    return "Write-only access granted"
+                }
+            }
+            return "Unknown status"
         }
     }
     
@@ -109,7 +125,17 @@ struct SettingsView: View {
         case .authorized: return "checkmark.circle.fill"
         case .denied: return "xmark.circle.fill"
         case .notDetermined: return "questionmark.circle.fill"
-        default: return "exclamationmark.triangle.fill"
+        case .restricted: return "lock.circle.fill"
+        @unknown default:
+            if #available(iOS 17.0, *) {
+                if calendarManager.authorizationStatus == .fullAccess {
+                    return "checkmark.circle.fill"
+                }
+                if calendarManager.authorizationStatus == .writeOnly {
+                    return "pencil.circle.fill"
+                }
+            }
+            return "exclamationmark.triangle.fill"
         }
     }
     
@@ -118,12 +144,56 @@ struct SettingsView: View {
         case .authorized: return .green
         case .denied: return .red
         case .notDetermined: return .orange
-        default: return .gray
+        case .restricted: return .gray
+        @unknown default:
+            if #available(iOS 17.0, *) {
+                if calendarManager.authorizationStatus == .fullAccess {
+                    return .green
+                }
+                if calendarManager.authorizationStatus == .writeOnly {
+                    return .orange
+                }
+            }
+            return .gray
         }
     }
     
     private var buttonText: String {
-        calendarManager.authorizationStatus == .denied ? "Open Settings" : "Request Access"
+        switch calendarManager.authorizationStatus {
+        case .denied:
+            return "Open Settings"
+        case .notDetermined:
+            return "Request Access"
+        case .restricted:
+            return "Access Restricted"
+        case .authorized:
+            return "Access Granted"
+        @unknown default:
+            if #available(iOS 17.0, *) {
+                if calendarManager.authorizationStatus == .fullAccess {
+                    return "Access Granted"
+                }
+                if calendarManager.authorizationStatus == .writeOnly {
+                    return "Request Full Access"
+                }
+            }
+            return "Request Access"
+        }
+    }
+    
+    private var isButtonDisabled: Bool {
+        if accessRequestState == .inProgress { return true }
+        switch calendarManager.authorizationStatus {
+        case .restricted, .authorized:
+            return true
+        @unknown default:
+            if #available(iOS 17.0, *) {
+                if calendarManager.authorizationStatus == .fullAccess {
+                    return true
+                }
+            }
+            return false
+        }
     }
     
     private var buttonColor: Color {

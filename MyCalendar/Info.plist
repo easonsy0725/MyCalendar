@@ -64,6 +64,8 @@
     <!-- Calendar permissions -->
     <key>NSCalendarsUsageDescription</key>
     <string>This app needs access to your calendar to display and manage events.</string>
+    <key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+    <string>This app needs write-only access to your calendar to add new events.</string>
     <key>NSCalendarsFullAccessUsageDescription</key>
     <string>This app needs full access to your calendar to display and manage events.</string>
     

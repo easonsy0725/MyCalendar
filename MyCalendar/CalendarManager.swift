@@ -25,23 +25,49 @@ class CalendarManager: NSObject, ObservableObject {
     @Published var isRequestingAccess = false
     @Published var lastAccessRequestError: Error? = nil
     
+    var isFullAccessAuthorized: Bool {
+        if #available(iOS 17.0, *) {
+            return authorizationStatus == .fullAccess
+        } else {
+            return authorizationStatus == .authorized
+        }
+    }
+    
+    var isWriteAccessAuthorized: Bool {
+        if #available(iOS 17.0, *) {
+            return authorizationStatus == .fullAccess || authorizationStatus == .writeOnly
+        } else {
+            return authorizationStatus == .authorized
+        }
+    }
+    
     override init() {
         super.init()
         checkStatus()
     }
     
     func requestAccess(completion: ((Bool) -> Void)? = nil) {
+        print("[CalendarManager] Requesting calendar access from the system...")
         isRequestingAccess = true
         lastAccessRequestError = nil
         
-        eventStore.requestAccess(to: .event) { [weak self] granted, error in
-            DispatchQueue.main.async {
-                self?.handleAccessResponse(granted: granted, error: error, completion: completion)
+        if #available(iOS 17.0, *) {
+            eventStore.requestFullAccessToEvents { [weak self] granted, error in
+                DispatchQueue.main.async {
+                    self?.handleAccessResponse(granted: granted, error: error, completion: completion)
+                }
+            }
+        } else {
+            eventStore.requestAccess(to: .event) { [weak self] granted, error in
+                DispatchQueue.main.async {
+                    self?.handleAccessResponse(granted: granted, error: error, completion: completion)
+                }
             }
         }
     }
     
     private func handleAccessResponse(granted: Bool, error: Error?, completion: ((Bool) -> Void)?) {
+        print("[CalendarManager] System responded. Granted: \(granted), Error: \(error?.localizedDescription ?? "None")")
         isRequestingAccess = false
         checkStatus()
         
@@ -51,8 +77,13 @@ class CalendarManager: NSObject, ObservableObject {
             return
         }
         
-        if granted {
-            loadEvents(for: Date())
+        let accessGranted = isFullAccessAuthorized || isWriteAccessAuthorized
+        
+        if accessGranted {
+            if isFullAccessAuthorized {
+                loadEvents(for: Date())
+            }
+            lastAccessRequestError = nil
             completion?(true)
         } else {
             lastAccessRequestError = NSError(
@@ -65,7 +96,7 @@ class CalendarManager: NSObject, ObservableObject {
     }
     
     func loadEvents(for date: Date) {
-        guard authorizationStatus == .authorized else { return }
+        guard isFullAccessAuthorized else { return }
         
         let calendar = Calendar.current
         let components = calendar.dateComponents([.year, .month], from: date)
@@ -83,7 +114,7 @@ class CalendarManager: NSObject, ObservableObject {
     }
     
     func addEvent(title: String, startDate: Date, endDate: Date) {
-        guard authorizationStatus == .authorized else { return }
+        guard isWriteAccessAuthorized else { return }
         
         let event = EKEvent(eventStore: eventStore)
         event.title = title
@@ -93,7 +124,9 @@ class CalendarManager: NSObject, ObservableObject {
         
         do {
             try eventStore.save(event, span: .thisEvent)
-            loadEvents(for: startDate)
+            if isFullAccessAuthorized {
+                loadEvents(for: startDate)
+            }
         } catch {
             print("Error saving event: \(error.localizedDescription)")
         }
@@ -101,6 +134,10 @@ class CalendarManager: NSObject, ObservableObject {
     
     func checkStatus() {
         authorizationStatus = EKEventStore.authorizationStatus(for: .event)
+        print("[CalendarManager] Status check complete. Current status is: \(authorizationStatusString()) (\(authorizationStatus.rawValue))")
+        if isFullAccessAuthorized {
+            loadEvents(for: Date())
+        }
     }
     
     func authorizationStatusString() -> String {
@@ -109,7 +146,15 @@ class CalendarManager: NSObject, ObservableObject {
         case .restricted: return "Restricted"
         case .denied: return "Denied"
         case .authorized: return "Authorized"
-        @unknown default: return "Unknown"
+        @unknown default:
+            if #available(iOS 17.0, *) {
+                if authorizationStatus == .fullAccess {
+                    return "Full Access"
+                } else if authorizationStatus == .writeOnly {
+                    return "Write-Only Access"
+                }
+            }
+            return "Unknown"
         }
     }
 }
