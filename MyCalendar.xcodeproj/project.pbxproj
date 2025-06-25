@@ -199,7 +199,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 19CB2F192E0C732900B4F1D1 /* Build configuration list for PBXProject "Info.plist" */;
+			buildConfigurationList = 19CB2F192E0C732900B4F1D1 /* Build configuration list for PBXProject "MyCalendar" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -528,7 +528,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		19CB2F192E0C732900B4F1D1 /* Build configuration list for PBXProject "Info.plist" */ = {
+		19CB2F192E0C732900B4F1D1 /* Build configuration list for PBXProject "MyCalendar" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				19CB2F3D2E0C732A00B4F1D1 /* Debug */,

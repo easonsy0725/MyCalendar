@@ -1,4 +1,4 @@
-// This file should be completely deleted from your project
+import EventKit
 import SwiftUI
 
 enum AccessRequestState: Equatable {
@@ -25,65 +25,48 @@ class CalendarManager: NSObject, ObservableObject {
     @Published var isRequestingAccess = false
     @Published var lastAccessRequestError: Error? = nil
     
+    override init() {
+        super.init()
+        checkStatus()
+    }
+    
     func requestAccess(completion: ((Bool) -> Void)? = nil) {
         isRequestingAccess = true
         lastAccessRequestError = nil
         
-        let currentStatus = EKEventStore.authorizationStatus(for: .event)
-        authorizationStatus = currentStatus
-        
-        switch currentStatus {
-        case .authorized:
-            loadEvents(for: Date())
-            isRequestingAccess = false
-            completion?(true)
-            
-        case .notDetermined:
-            eventStore.requestAccess(to: .event) { [weak self] granted, error in
+        if #available(iOS 17.0, *) {
+            eventStore.requestFullAccessToEvents { [weak self] granted, error in
                 DispatchQueue.main.async {
-                    guard let self = self else { return }
-                    
-                    self.isRequestingAccess = false
-                    let newStatus = EKEventStore.authorizationStatus(for: .event)
-                    self.authorizationStatus = newStatus
-                    
-                    if let error = error {
-                        self.lastAccessRequestError = error
-                        completion?(false)
-                        return
-                    }
-                    
-                    if granted {
-                        self.loadEvents(for: Date())
-                        completion?(true)
-                    } else {
-                        if newStatus == .denied {
-                            self.lastAccessRequestError = NSError(
-                                domain: "CalendarAccess",
-                                code: 0,
-                                userInfo: [NSLocalizedDescriptionKey: "User denied calendar access"]
-                            )
-                        }
-                        completion?(false)
-                    }
+                    self?.handleAccessResponse(granted: granted, error: error, completion: completion)
                 }
             }
-            
-        case .denied, .restricted:
-            isRequestingAccess = false
-            lastAccessRequestError = NSError(
-                domain: "CalendarAccess",
-                code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "Calendar access denied or restricted"]
-            )
+        } else {
+            eventStore.requestAccess(to: .event) { [weak self] granted, error in
+                DispatchQueue.main.async {
+                    self?.handleAccessResponse(granted: granted, error: error, completion: completion)
+                }
+            }
+        }
+    }
+    
+    private func handleAccessResponse(granted: Bool, error: Error?, completion: ((Bool) -> Void)?) {
+        isRequestingAccess = false
+        checkStatus()
+        
+        if let error = error {
+            lastAccessRequestError = error
             completion?(false)
-            
-        @unknown default:
-            isRequestingAccess = false
+            return
+        }
+        
+        if granted {
+            loadEvents(for: Date())
+            completion?(true)
+        } else {
             lastAccessRequestError = NSError(
                 domain: "CalendarAccess",
-                code: 2,
-                userInfo: [NSLocalizedDescriptionKey: "Unknown authorization status"]
+                code: 0,
+                userInfo: [NSLocalizedDescriptionKey: "Calendar access was denied"]
             )
             completion?(false)
         }
@@ -134,6 +117,10 @@ class CalendarManager: NSObject, ObservableObject {
         case .restricted: return "Restricted"
         case .denied: return "Denied"
         case .authorized: return "Authorized"
+        @unknown default: return "Unknown"
+        }
+    }
+}
         @unknown default: return "Unknown"
         }
     }
