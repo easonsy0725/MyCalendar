@@ -29,9 +29,22 @@
 		19CB2F352E0C732A00B4F1D1 /* MyCalendarUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MyCalendarUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		19B255A72E0C7AD900469CDE /* Exceptions for "MyCalendar" folder in "MyCalendar" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 19CB2F1D2E0C732900B4F1D1 /* MyCalendar */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		19CB2F202E0C732900B4F1D1 /* MyCalendar */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				19B255A72E0C7AD900469CDE /* Exceptions for "MyCalendar" folder in "MyCalendar" target */,
+			);
 			path = MyCalendar;
 			sourceTree = "<group>";
 		};
@@ -186,7 +199,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 19CB2F192E0C732900B4F1D1 /* Build configuration list for PBXProject "MyCalendar" */;
+			buildConfigurationList = 19CB2F192E0C732900B4F1D1 /* Build configuration list for PBXProject "Info.plist" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -395,6 +408,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 539M4MA274;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -407,7 +421,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = calendar.MyCalendar;
+				PRODUCT_BUNDLE_IDENTIFIER = Eason.MyCalendar;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -422,6 +436,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 539M4MA274;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -434,7 +449,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = calendar.MyCalendar;
+				PRODUCT_BUNDLE_IDENTIFIER = Eason.MyCalendar;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -513,7 +528,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		19CB2F192E0C732900B4F1D1 /* Build configuration list for PBXProject "MyCalendar" */ = {
+		19CB2F192E0C732900B4F1D1 /* Build configuration list for PBXProject "Info.plist" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				19CB2F3D2E0C732A00B4F1D1 /* Debug */,
